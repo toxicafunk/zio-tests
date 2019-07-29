@@ -56,9 +56,9 @@ object Main {
   def main(args: Array[String]): Unit = {
     val rmds = for {
       prd <- messenger.getProducer
-      str <- fileReader.readFile("/messages.txt")
+      str <- fileReader.readFile("/msgs100k.json")
       rmd <- str
-        .tap(
+        .mapM(
           l => messenger.send(prd, idL.getOption(toJson(l)).getOrElse("UND"), l)
         )
         .tap(md => putStrLn(md.toString()))

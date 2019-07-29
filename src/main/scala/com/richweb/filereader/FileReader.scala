@@ -8,7 +8,9 @@ import zio.stream._
 
 object FileReader {
   trait Service {
-    def readFile(file: String): ZIO[Blocking, Throwable, Stream[Nothing, String]]
+    def readFile(
+        file: String
+    ): ZIO[Blocking, Throwable, Stream[Nothing, String]]
   }
 }
 
@@ -18,9 +20,20 @@ trait FileReader {
 
 trait FileReaderLive extends FileReader {
   val reader: FileReader.Service = new FileReader.Service {
-    override def readFile(file: String): ZIO[Blocking, Throwable, Stream[Nothing, String]] =
+    override def readFile(
+        file: String
+    ): ZIO[Blocking, Throwable, Stream[Nothing, String]] =
       for {
-        ite <- blocking(ZIO.effect(Source.fromFile(file).getLines().toIterable))
+        ite <- blocking(
+          ZIO.effect(
+            Source
+              .fromInputStream(
+                this.getClass.getResourceAsStream(file)
+              )
+              .getLines()
+              .toIterable
+          )
+        )
         str <- ZIO.effect(Stream.fromIterable(ite))
       } yield str
   }

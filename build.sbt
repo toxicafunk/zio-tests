@@ -17,7 +17,7 @@ scalacOptions ++= Seq(
   "-Ywarn-value-discard"
 )
 
-//javaOptions += "-agentpath:/usr/share/visualvm/profiler/lib/deployed/jdk16/linux-amd64/libprofilerinterface.so=/usr/share/visualvm/profiler/lib,5140"
+javaOptions += "-agentpath:/usr/share/visualvm/profiler/lib/deployed/jdk16/linux-amd64/libprofilerinterface.so=/usr/share/visualvm/profiler/lib,5140"
 
 resolvers += Resolver.bintrayRepo("cakesolutions", "maven")
 

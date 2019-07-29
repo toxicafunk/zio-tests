@@ -4,6 +4,8 @@ version := "0.1"
 
 scalaVersion := "2.12.8"
 
+fork in run := true
+
 val zioVersion = "1.0.0-RC10-1"
 val circeVersion = "0.11.1"
 
@@ -14,6 +16,8 @@ scalacOptions ++= Seq(
   "-Ypartial-unification",
   "-Ywarn-value-discard"
 )
+
+javaOptions += "-agentpath:/usr/share/visualvm/profiler/lib/deployed/jdk16/linux-amd64/libprofilerinterface.so=/usr/share/visualvm/profiler/lib,5140"
 
 resolvers += Resolver.bintrayRepo("cakesolutions", "maven")
 
@@ -31,4 +35,4 @@ libraryDependencies ++= Seq(
 // https://www.scala-sbt.org/1.x/docs/Community-Plugins.html
 
 // http://www.wartremover.org/
-//wartremoverErrors ++= Warts.unsafe
+wartremoverErrors ++= Warts.unsafe

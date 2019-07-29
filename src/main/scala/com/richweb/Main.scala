@@ -37,7 +37,7 @@ object Main extends App {
   val idL = root.id.string
 
   val producer = KafkaProducer(
-    Conf(new StringSerializer(), new StringSerializer(), bootstrapServers = "172.18.0.3:9092,172.18.0.4:9092,172.18.0.5:9092")
+    Conf(new StringSerializer(), new StringSerializer(), bootstrapServers = "172.18.0.2:9092,172.18.0.4:9092,172.18.0.5:9092")
   )
 
   val sendMessage: String => Task[RecordMetadata] = (data: String) => ZIO.fromFuture ( implicit ctx => {
@@ -45,9 +45,9 @@ object Main extends App {
     producer.send(record)
   })
 
-  @SuppressWarnings(Array("org.wartremover.warts.Any"))
+  //@SuppressWarnings(Array("org.wartremover.warts.Any"))
   override def run(args: List[String]): ZIO[Environment, Nothing, Int] = {
-    readFile("/messages.txt")
+    readFile("/msgs100k.json")
       .tap(l => sendMessage(l) >>= (rmd => putStrLn(rmd.toString())))
       //.foreach(l => sendMessage(l) >>= (rmd => putStrLn(rmd.toString())))
       .runDrain

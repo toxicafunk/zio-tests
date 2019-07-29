@@ -37,7 +37,7 @@ object Main extends App {
 
   val idL = root.id.string
 
-  val producer = Task.effect(
+  val getProducer = Task.effect(
     KafkaProducer(
       Conf(
         new StringSerializer(),
@@ -62,7 +62,7 @@ object Main extends App {
   @SuppressWarnings(Array("org.wartremover.warts.Any"))
   override def run(args: List[String]): ZIO[Environment, Nothing, Int] = {
     val rmds = for {
-      prd <- producer
+      prd <- getProducer
       lst <- readFile("/msgs100k.json")
       rmd <- Task.foreach(lst)(l => sendMessage(prd, l))
       _   <- ZIO.foreach_(rmd)(md => putStrLn(md.toString()))

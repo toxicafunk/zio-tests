@@ -1,33 +1,24 @@
 package com.richweb
 
-import scala.io.{Codec, Source}
-import scala.concurrent.Future
-
-import zio.{App, Task, UIO, ZIO}
+import zio.{App, DefaultRuntime, Runtime, Task, UIO, ZIO}
 import zio.console.putStrLn
 import zio.stream._
+import zio.blocking.Blocking
+import zio.console.Console
 
 import io.circe.Json
 import io.circe.optics.JsonPath.root
 import io.circe.parser.parse
 
-import cakesolutions.kafka.KafkaProducer.Conf
+import com.richweb.filereader._
+import com.richweb.messaging.Messaging
+
 import cakesolutions.kafka.{KafkaProducer, KafkaProducerRecord}
-
 import org.apache.kafka.clients.producer.RecordMetadata
-import org.apache.kafka.common.serialization.StringSerializer
+import zio.internal.PlatformLive
+import com.richweb.messaging.MessagingLive
 
-object Main extends App {
-
-  val readFile: String => Task[List[String]] = f =>
-    Task.effect(
-      Source
-        .fromInputStream(
-          this.getClass.getResourceAsStream(f)
-        )
-        .getLines()
-        .toList
-    )
+object Main {
 
   val toJson: String => Json = txt =>
     parse(txt) match {
@@ -37,36 +28,43 @@ object Main extends App {
 
   val idL = root.id.string
 
-  val getProducer = Task.effect(
-    KafkaProducer(
-      Conf(
-        new StringSerializer(),
-        new StringSerializer(),
-        bootstrapServers = "172.18.0.2:9092,172.18.0.4:9092,172.18.0.5:9092"
-      )
-    )
+  object fileReader {
+    def readFile(
+        file: String
+    ): ZIO[FileReader with Blocking, Throwable, Stream[Nothing, String]] =
+      ZIO.accessM(_.reader.readFile(file))
+  }
+
+  object messenger {
+    val getProducer: ZIO[Messaging, Throwable, KafkaProducer[String, String]] =
+      ZIO.accessM(_.messenger.getProducer)
+
+    def send(
+        producer: KafkaProducer[String, String],
+        key: String,
+        data: String
+    ): ZIO[Messaging, Throwable, RecordMetadata] =
+      ZIO.accessM(_.messenger.send(producer, key, data))
+  }
+
+  val testRuntime = Runtime(
+    new FileReaderLive with Blocking.Live with MessagingLive with Console.Live,
+    PlatformLive.Default
   )
 
-  val sendMessage
-      : (KafkaProducer[String, String], String) => Task[RecordMetadata] =
-    (producer, data) =>
-      ZIO.fromFuture(implicit ctx => {
-        val record = KafkaProducerRecord(
-          "julio.genio.stream",
-          idL.getOption(toJson(data)).getOrElse(""),
-          data
-        )
-        producer.send(record)
-      })
-
   @SuppressWarnings(Array("org.wartremover.warts.Any"))
-  override def run(args: List[String]): ZIO[Environment, Nothing, Int] = {
+  def main(args: Array[String]): Unit = {
     val rmds = for {
-      prd <- getProducer
-      lst <- readFile("/msgs100k.json")
-      rmd <- Task.foreach(lst)(l => sendMessage(prd, l))
-      _   <- ZIO.foreach_(rmd)(md => putStrLn(md.toString()))
+      prd <- messenger.getProducer
+      str <- fileReader.readFile("/messages.txt")
+      rmd <- str
+        .tap(
+          l => messenger.send(prd, idL.getOption(toJson(l)).getOrElse("UND"), l)
+        )
+        .tap(md => putStrLn(md.toString()))
+        .runDrain
     } yield ()
-    rmds.foldM(_ => UIO(1), _ => UIO(0))
+
+    testRuntime.unsafeRun(rmds)
   }
 }

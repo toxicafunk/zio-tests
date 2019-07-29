@@ -1,4 +1,4 @@
-name := "Principles in FuncProg"
+name := "ZIO Tests"
 
 version := "0.1"
 

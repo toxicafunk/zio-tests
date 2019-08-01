@@ -59,7 +59,7 @@ object Main {
       //str <- fileReader.readFile("/msgs100k.json")
       str <- ZIO.accessM((r: FileReader with Blocking) => r.reader.readFile("/msgs100k.json"))
       rmd <- str
-      .mapMParUnordered(80)(
+      .mapMParUnordered(120)(
           l => messenger.send(prd, idL.getOption(toJson(l)).getOrElse("UND"), l)
         )
         .tap(md => putStrLn(md.toString()))

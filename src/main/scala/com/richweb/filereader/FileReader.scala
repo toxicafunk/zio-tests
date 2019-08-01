@@ -6,11 +6,10 @@ import zio.ZIO
 import zio.blocking._
 import zio.stream._
 
+// Module pattern
 object FileReader {
   trait Service {
-    def readFile(
-        file: String
-    ): ZIO[Blocking, Throwable, Stream[Nothing, String]]
+    def readFile(file: String): ZIO[Blocking, Throwable, Stream[Nothing, String]]
   }
 }
 

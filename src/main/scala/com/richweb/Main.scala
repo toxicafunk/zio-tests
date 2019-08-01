@@ -28,12 +28,12 @@ object Main {
 
   val idL = root.id.string
 
-  object fileReader {
+  /*object fileReader {
     def readFile(
         file: String
     ): ZIO[FileReader with Blocking, Throwable, Stream[Nothing, String]] =
       ZIO.accessM(_.reader.readFile(file))
-  }
+  }*/
 
   object messenger {
     val getProducer: ZIO[Messaging, Throwable, KafkaProducer[String, String]] =
@@ -56,15 +56,19 @@ object Main {
   def main(args: Array[String]): Unit = {
     val rmds = for {
       prd <- messenger.getProducer
-      str <- fileReader.readFile("/msgs100k.json")
+      //str <- fileReader.readFile("/msgs100k.json")
+      str <- ZIO.accessM((r: FileReader with Blocking) => r.reader.readFile("/msgs100k.json"))
       rmd <- str
-        .mapM(
+      .mapMParUnordered(80)(
           l => messenger.send(prd, idL.getOption(toJson(l)).getOrElse("UND"), l)
         )
         .tap(md => putStrLn(md.toString()))
         .runDrain
     } yield ()
 
+    val t0 = System.currentTimeMillis()
     testRuntime.unsafeRun(rmds)
+    val t1 = System.currentTimeMillis()
+    println(s"Completed in ${t1 - t0} ms")
   }
 }

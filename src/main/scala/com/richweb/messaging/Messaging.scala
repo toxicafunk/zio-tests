@@ -27,7 +27,7 @@ trait Messaging {
 trait MessagingLive extends Messaging {
 
   override val messenger: Messaging.Service = new Messaging.Service {
-    val getProducer = Task.effect(
+    val getProducer = Task.succeed(
       KafkaProducer(
         Conf(
           new StringSerializer(),

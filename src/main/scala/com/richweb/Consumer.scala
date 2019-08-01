@@ -7,7 +7,7 @@ import org.apache.kafka.clients.consumer.{ConsumerRecords, ConsumerRecord, Offse
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 
-import zio.{DefaultRuntime, Task, UIO, ZIO}
+import zio.{DefaultRuntime, Schedule, Task, UIO, ZIO}
 import zio.console.putStrLn
 
 import scala.collection.JavaConverters._
@@ -22,8 +22,8 @@ object Consumer {
     Conf(
       new StringDeserializer,
       new StringDeserializer,
-      bootstrapServers = "172.18.0.3:9092,172.18.0.4:9092,172.18.0.5:9092",
-      groupId = "consumer08",
+      bootstrapServers = "172.18.0.2:9092,172.18.0.4:9092,172.18.0.5:9092",
+      groupId = "cons02",
       enableAutoCommit = true,
       autoOffsetReset = OffsetResetStrategy.EARLIEST
     )
@@ -56,13 +56,14 @@ object Consumer {
     printer <- ZIO.sequence(grouped.map(mss => putStrLn(s"${mss._1} -> ${mss._2}")))
   } yield printer
 
+  val fiveTimes: Schedule[Any, Int] = Schedule.recurs(2)
 
   @SuppressWarnings(Array("org.wartremover.warts.Any"))
   def main(args: Array[String]): Unit = {
     val runtime = new DefaultRuntime {}
     println("Starting!")
     val t0 = System.currentTimeMillis()
-    runtime.unsafeRun(program.forever.unit)//.map((x: ConsumerRecord[String, String]) => println(x.value))
+    runtime.unsafeRun(program.repeat(fiveTimes).map(println).unit)
     val t1 = System.currentTimeMillis()
     println(s"Elapsed time: ${t1 - t0} ms")
   }

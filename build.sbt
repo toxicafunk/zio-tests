@@ -33,7 +33,8 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-optics" % "0.11.0",
   "net.cakesolutions" %% "scala-kafka-client" % "2.1.0",
   "io.prometheus" % "simpleclient" % "0.6.0",
-  "io.prometheus" % "simpleclient_httpserver" % "0.6.0"
+  "io.prometheus" % "simpleclient_httpserver" % "0.6.0",
+  "io.dropwizard.metrics" % "metrics-core"    % "4.0.1"
 )
 
 // https://www.scala-sbt.org/1.x/docs/Community-Plugins.html

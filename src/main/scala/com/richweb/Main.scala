@@ -28,6 +28,7 @@ import org.apache.kafka.common.serialization.StringSerializer
 import scala.math.Numeric.IntIsIntegral
 
 import java.net.InetSocketAddress
+import java.util.concurrent.TimeUnit
 import zio.metrics._
 
 object Main {
@@ -64,10 +65,18 @@ object Main {
     PlatformLive.Default
   )
 
+  import com.codahale.metrics.Timer.Context
+  import com.codahale.metrics.ConsoleReporter
+
   @SuppressWarnings(Array("org.wartremover.warts.Any"))
   def main(args: Array[String]): Unit = {
-    val metrics = new PrometheusMetrics()
-    val server = new HTTPServer(new InetSocketAddress(1234), metrics.registry);
+    val metrics = new DropwizardMetrics()
+    val reporter = ConsoleReporter.forRegistry(metrics.registry)
+                                                .convertRatesTo(TimeUnit.SECONDS)
+                                                .convertDurationsTo(TimeUnit.MILLISECONDS)
+                                                .build()
+    reporter.start(20, TimeUnit.SECONDS);
+
     val rmds = for {
       prd <- messenger.getProducer
       cnt <- metrics.counter(Label("kafka_sent_messages", Array("zenv")))
@@ -86,5 +95,6 @@ object Main {
     testRuntime.unsafeRun(rmds)
     val t1 = System.currentTimeMillis()
     println(s"Completed in ${t1 - t0} ms")
+    Thread.sleep(20000)
   }
 }

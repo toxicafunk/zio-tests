@@ -71,14 +71,15 @@ object Main {
     val rmds = for {
       prd <- messenger.getProducer
       cnt <- metrics.counter(Label("kafka_sent_messages", Array("zenv")))
-      tmr <- metrics.timer(Label("simple_timer", Array("test", "timer")))
+      //tmr <- metrics.timer(Label("simple_timer", Array("test", "timer")))
+      tmr <- metrics.histogramTimer(Label("simple_timer", Array.empty[String]))
       //str <- fileReader.readFile("/msgs100k.json")
       str <- ZIO.accessM((r: FileReader with Blocking) => r.reader.readFile("/msgs100k.json"))
       rmd <- str
       .mapMParUnordered(120)(
-        l => messenger.send(prd, idL.getOption(toJson(l)).getOrElse("UND"), l).map(rmd => (rmd,  tmr.start))
+        l => messenger.send(prd, idL.getOption(toJson(l)).getOrElse("UND"), l)
         )
-        .tap(md => cnt(1) *> tmr.stop(md._2) *> putStrLn(md._1.toString()))
+        .tap(md => cnt(1) *> tmr() *> putStrLn(md.toString()))
         .runDrain
     } yield ()
 

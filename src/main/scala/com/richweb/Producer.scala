@@ -60,7 +60,7 @@ object Producer extends App {
       })
 
   @SuppressWarnings(Array("org.wartremover.warts.Any"))
-  override def run(args: List[String]): ZIO[Environment, Nothing, Int] = {
+  override def run(args: List[String]) = {
     val rmds = for {
       prd <- getProducer
       lst <- readFile("/msgs100k.json")

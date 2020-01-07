@@ -6,7 +6,9 @@ import zio.stream._
 import zio.blocking.Blocking
 import zio.console.Console
 
-import zio.metrics.{Label, PrometheusMetrics}
+import zio.metrics._
+import zio.metrics.prometheus._
+import zio.metrics.prometheus.helpers._
 
 import io.circe.Json
 import io.circe.optics.JsonPath.root
@@ -14,8 +16,6 @@ import io.circe.parser.parse
 
 import com.richweb.filereader._
 import com.richweb.messaging.Messaging
-
-import io.prometheus.client.exporter._
 
 import cakesolutions.kafka.KafkaProducer.Conf
 import cakesolutions.kafka.{KafkaProducer, KafkaProducerRecord}
@@ -28,7 +28,6 @@ import org.apache.kafka.common.serialization.StringSerializer
 import scala.math.Numeric.IntIsIntegral
 
 import java.net.InetSocketAddress
-import zio.metrics._
 
 object Main {
 
@@ -40,12 +39,12 @@ object Main {
 
   val idL = root.id.string
 
-  /*object fileReader {
+  object fileReader {
     def readFile(
         file: String
     ): ZIO[FileReader with Blocking, Throwable, Stream[Nothing, String]] =
       ZIO.accessM(_.reader.readFile(file))
-  }*/
+  }
 
   object messenger {
     val getProducer: ZIO[Messaging, Throwable, KafkaProducer[String, String]] =
@@ -60,26 +59,28 @@ object Main {
   }
 
   val testRuntime = Runtime(
-    new FileReaderLive with Blocking.Live with MessagingLive with Console.Live,
+    new FileReaderLive with Blocking.Live with MessagingLive with PrometheusRegistry
+        with PrometheusExporters with Console.Live,
     PlatformLive.Default
   )
 
   @SuppressWarnings(Array("org.wartremover.warts.Any"))
   def main(args: Array[String]): Unit = {
-    val metrics = new PrometheusMetrics()
-    val server = new HTTPServer(new InetSocketAddress(1234), metrics.registry);
     val rmds = for {
       prd <- messenger.getProducer
-      cnt <- metrics.counter(Label("kafka_sent_messages", Array("zenv")))
-      //tmr <- metrics.timer(Label("simple_timer", Array("test", "timer")))
-      tmr <- metrics.histogramTimer(Label("simple_timer", Array.empty[String]))
-      //str <- fileReader.readFile("/msgs100k.json")
-      str <- ZIO.accessM((r: FileReader with Blocking) => r.reader.readFile("/msgs100k.json"))
+      h   <- histogram.register("simple_timer", LinearBuckets(4,6,12))
+      tmr <- h.startTimer()
+      r   <- registry.getCurrent()
+      _   <- exporters.initializeDefaultExports(r)
+      hs  <- exporters.http(r, 9090)
+      cnt <- counter.register("kafka_sent_messages", Array("zenv"))
+      str <- fileReader.readFile("/msgs100k.json")
+      //str <- ZIO.accessM((r: FileReader with Blocking) => r.reader.readFile("/msgs100k.json"))
       rmd <- str
       .mapMParUnordered(120)(
         l => messenger.send(prd, idL.getOption(toJson(l)).getOrElse("UND"), l)
         )
-        .tap(md => cnt(1) *> tmr() *> putStrLn(md.toString()))
+        .tap(md => cnt.inc(Array("zenv")) *> h.observeDuration(tmr) *> putStrLn(md.toString()))
         .runDrain
     } yield ()
 

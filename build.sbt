@@ -5,8 +5,9 @@ version := "0.1"
 scalaVersion := "2.12.8"
 
 fork in run := true
+run / connectInput := true
 
-val zioVersion = "1.0.0-RC10-1"
+val zioVersion = "1.0.0-RC17"
 val circeVersion = "0.11.1"
 
 // better type inference when multiple type parameters are involved and they need to be inferred in multiple steps
@@ -26,7 +27,7 @@ libraryDependencies ++= Seq(
   "org.scalaz" %% "scalaz-core" % "7.2.27",
   "dev.zio" %% "zio" % zioVersion,
   "dev.zio" %% "zio-streams" % zioVersion,
-  "dev.zio" %% "zio-metrics" % "0.0.2",
+  "dev.zio" %% "zio-metrics-prometheus" % "0.0.6",
   "io.circe" %% "circe-core" % circeVersion,
   "io.circe" %% "circe-generic" % circeVersion,
   "io.circe" %% "circe-parser" % circeVersion,
